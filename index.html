@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Редактор Telegram-бота · Крипто-анализ</title>
+  <meta name="theme-color" content="#0f172a" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    * { -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; overflow: hidden; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    .CodeMirror {
+      height: 100% !important;
+      font-size: 14px;
+      line-height: 1.45;
+      border-radius: 12px;
+    }
+    @media (max-width: 640px) {
+      .CodeMirror { font-size: 13px; }
+    }
+    .btn {
+      transition: transform 0.15s, opacity 0.15s;
+    }
+    .btn:active { transform: scale(0.96); opacity: 0.9; }
+    .panel-scroll { -webkit-overflow-scrolling: touch; }
+    .tab-active { background: #1e293b; color: #fff; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 flex flex-col h-full">
+
+  <!-- Header -->
+  <header class="flex-none bg-slate-900 border-b border-slate-800 px-3 py-3 flex items-center justify-between gap-2">
+    <div class="flex items-center gap-2 min-w-0">
+      <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center text-sm font-bold flex-none">₿</div>
+      <div class="min-w-0">
+        <h1 class="text-sm font-semibold truncate">Редактор бота</h1>
+        <p class="text-[11px] text-slate-400 truncate">Крипто-анализ · Полностью бесплатно</p>
+      </div>
+    </div>
+    <div class="flex gap-1.5 flex-none">
+      <button onclick="downloadCode()" class="btn bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-medium px-3 py-2 rounded-lg">
+        Скачать .py
+      </button>
+      <button onclick="toggleHelp()" class="btn bg-slate-700 hover:bg-slate-600 text-white text-xs font-medium px-3 py-2 rounded-lg">
+        ?
+      </button>
+    </div>
+  </header>
+
+  <!-- Tabs -->
+  <div class="flex-none flex bg-slate-900 border-b border-slate-800 overflow-x-auto">
+    <button onclick="showTab('editor')" id="tab-editor" class="tab-active flex-1 min-w-[90px] py-2.5 text-xs font-medium text-center">Код</button>
+    <button onclick="showTab('preview')" id="tab-preview" class="flex-1 min-w-[90px] py-2.5 text-xs font-medium text-center text-slate-400">Команды</button>
+    <button onclick="showTab('deploy')" id="tab-deploy" class="flex-1 min-w-[90px] py-2.5 text-xs font-medium text-center text-slate-400">Запуск</button>
+  </div>
+
+  <!-- Main content -->
+  <main class="flex-1 overflow-hidden relative">
+
+    <!-- EDITOR TAB -->
+    <div id="panel-editor" class="absolute inset-0 p-2 flex flex-col">
+      <div class="flex-1 rounded-xl overflow-hidden border border-slate-800">
+        <textarea id="code"></textarea>
+      </div>
+      <div class="flex gap-2 mt-2 flex-none">
+        <button onclick="resetCode()" class="btn flex-1 bg-slate-800 hover:bg-slate-700 text-xs py-2.5 rounded-xl">Сбросить шаблон</button>
+        <button onclick="copyCode()" class="btn flex-1 bg-slate-800 hover:bg-slate-700 text-xs py-2.5 rounded-xl">Копировать</button>
+      </div>
+    </div>
+
+    <!-- PREVIEW / COMMANDS TAB -->
+    <div id="panel-preview" class="absolute inset-0 hidden overflow-y-auto panel-scroll p-4 space-y-4">
+      <div class="bg-slate-900 rounded-2xl p-4 border border-slate-800">
+        <h2 class="text-sm font-semibold mb-3 text-cyan-400">Что умеет бот</h2>
+        <ul class="space-y-2 text-sm text-slate-300">
+          <li class="flex gap-2"><span class="text-cyan-500">•</span> Актуальная цена BTC, ETH, SOL и 100+ монет</li>
+          <li class="flex gap-2"><span class="text-cyan-500">•</span> Простой технический анализ (тренд, SMA, RSI)</li>
+          <li class="flex gap-2"><span class="text-cyan-500">•</span> Текстовое «предсказание» на основе индикаторов</li>
+          <li class="flex gap-2"><span class="text-cyan-500">•</span> Описание рынка простым языком</li>
+          <li class="flex gap-2"><span class="text-cyan-500">•</span> Полностью бесплатные API (CoinGecko + Binance)</li>
+        </ul>
+      </div>
+
+      <div class="bg-slate-900 rounded-2xl p-4 border border-slate-800">
+        <h2 class="text-sm font-semibold mb-3 text-cyan-400">Команды бота</h2>
+        <div class="space-y-3 text-sm">
+          <div class="bg-slate-950 rounded-xl p-3">
+            <code class="text-cyan-400">/start</code>
+            <p class="text-slate-400 text-xs mt-1">Приветствие и список команд</p>
+          </div>
+          <div class="bg-slate-950 rounded-xl p-3">
+            <code class="text-cyan-400">/price BTC</code>
+            <p class="text-slate-400 text-xs mt-1">Текущая цена + изменение за 24ч</p>
+          </div>
+          <div class="bg-slate-950 rounded-xl p-3">
+            <code class="text-cyan-400">/analyze ETH</code>
+            <p class="text-slate-400 text-xs mt-1">Полный анализ + тренд + «прогноз»</p>
+          </div>
+          <div class="bg-slate-950 rounded-xl p-3">
+            <code class="text-cyan-400">/market</code>
+            <p class="text-slate-400 text-xs mt-1">Обзор топ-монет рынка</p>
+          </div>
+          <div class="bg-slate-950 rounded-xl p-3">
+            <code class="text-cyan-400">/help</code>
+            <p class="text-slate-400 text-xs mt-1">Справка</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-amber-950/40 border border-amber-800/50 rounded-2xl p-4">
+        <p class="text-amber-200 text-xs leading-relaxed">
+          ⚠️ Бот даёт <strong>образовательный</strong> анализ на основе простых индикаторов. 
+          Это не финансовая рекомендация. Настоящие предсказания рынка невозможны со 100% точностью.
+        </p>
+      </div>
+    </div>
+
+    <!-- DEPLOY TAB -->
+    <div id="panel-deploy" class="absolute inset-0 hidden overflow-y-auto panel-scroll p-4 space-y-4">
+      <div class="bg-slate-900 rounded-2xl p-4 border border-slate-800">
+        <h2 class="text-sm font-semibold mb-3 text-cyan-400">Как запустить бесплатно</h2>
+        
+        <div class="space-y-4 text-sm">
+          <div>
+            <p class="font-medium text-white mb-1">1. Создай бота в Telegram</p>
+            <p class="text-slate-400 text-xs leading-relaxed">
+              Напиши @BotFather → /newbot → придумай имя → получи <strong>TOKEN</strong>
+            </p>
+          </div>
+
+          <div>
+            <p class="font-medium text-white mb-1">2. Вставь токен в код</p>
+            <p class="text-slate-400 text-xs leading-relaxed">
+              В редакторе найди строку <code class="text-cyan-400">BOT_TOKEN = "..."</code> и вставь свой токен.
+            </p>
+          </div>
+
+          <div>
+            <p class="font-medium text-white mb-1">3. Выбери способ запуска (всё бесплатно)</p>
+            <ul class="text-slate-400 text-xs space-y-2 mt-2">
+              <li class="bg-slate-950 rounded-lg p-2.5">
+                <strong class="text-white">Replit</strong> — самый простой<br>
+                Создай Python-проект → вставь код → Run. Работает 24/7 на бесплатном тарифе (с ограничениями).
+              </li>
+              <li class="bg-slate-950 rounded-lg p-2.5">
+                <strong class="text-white">PythonAnywhere</strong><br>
+                Загрузи файл → создай Always-on task (бесплатный тариф есть).
+              </li>
+              <li class="bg-slate-950 rounded-lg p-2.5">
+                <strong class="text-white">Свой компьютер</strong><br>
+                Установи Python → <code>pip install python-telegram-bot requests</code> → запусти файл.
+              </li>
+              <li class="bg-slate-950 rounded-lg p-2.5">
+                <strong class="text-white">Railway / Render</strong><br>
+                Бесплатный тариф (с лимитами). Подходит для постоянного хостинга.
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <p class="font-medium text-white mb-1">4. Нужные библиотеки</p>
+            <pre class="bg-slate-950 rounded-lg p-3 text-xs text-cyan-300 overflow-x-auto">pip install python-telegram-bot requests</pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-slate-900 rounded-2xl p-4 border border-slate-800">
+        <h2 class="text-sm font-semibold mb-2 text-cyan-400">Важно</h2>
+        <ul class="text-xs text-slate-400 space-y-1.5">
+          <li>• Никому не показывай свой BOT_TOKEN</li>
+          <li>• API CoinGecko и Binance — полностью бесплатные, ключ не нужен</li>
+          <li>• Бот работает в режиме long-polling (не нужен HTTPS-сервер)</li>
+        </ul>
+      </div>
+    </div>
+  </main>
+
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-20 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-sm px-4 py-2 rounded-full shadow-lg opacity-0 transition-opacity duration-300 pointer-events-none z-50"></div>
+
+  <!-- Help modal -->
+  <div id="help-modal" class="fixed inset-0 bg-black/70 z-50 hidden items-end sm:items-center justify-center p-0 sm:p-4" onclick="if(event.target===this)toggleHelp()">
+    <div class="bg-slate-900 w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl max-h-[85vh] overflow-y-auto panel-scroll p-5">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="font-semibold text-lg">Как пользоваться</h2>
+        <button onclick="toggleHelp()" class="text-slate-400 text-2xl leading-none">&times;</button>
+      </div>
+      <div class="space-y-3 text-sm text-slate-300">
+        <p>1. Открой вкладку <strong>Код</strong> — там уже лежит готовый бот.</p>
+        <p>2. Вставь свой токен от @BotFather.</p>
+        <p>3. Можешь менять код как хочешь — добавляй команды, меняй тексты, добавляй фишки.</p>
+        <p>4. Нажми <strong>Скачать .py</strong> и загрузи файл на Replit / PythonAnywhere / свой ПК.</p>
+        <p>5. Запусти — бот сразу начнёт отвечать в Telegram.</p>
+        <p class="text-cyan-400 pt-2">Всё полностью бесплатно. Никаких подписок.</p>
+      </div>
+    </div>
+  </div>
+
+<script>
+const DEFAULT_CODE = `"""
+Telegram-бот для анализа крипторынка
+Полностью бесплатно: CoinGecko + Binance API
+Автор: создано в редакторе
+"""
+
+import logging
+import requests
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Application, CommandHandler, ContextTypes, CallbackQueryHandler
+
+# ================== НАСТРОЙКИ ==================
+BOT_TOKEN = "ВСТАВЬ_СВОЙ_ТОКЕН_СЮДА"   # ← получи у @BotFather
+# ===============================================
+
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO
+)
+logger = logging.getLogger(__name__)
+
+# ---------- Вспомогательные функции ----------
+
+def get_price_coingecko(symbol: str) -> dict | None:
+    """Получить данные монеты через CoinGecko (бесплатно)"""
+    symbol = symbol.lower().strip()
+    # Популярные id
+    mapping = {
+        "btc": "bitcoin", "eth": "ethereum", "sol": "solana",
+        "bnb": "binancecoin", "xrp": "ripple", "ada": "cardano",
+        "doge": "dogecoin", "ton": "the-open-network", "trx": "tron",
+        "dot": "polkadot", "avax": "avalanche-2", "link": "chainlink",
+        "matic": "matic-network", "shib": "shiba-inu", "ltc": "litecoin",
+        "atom": "cosmos", "uni": "uniswap", "near": "near", "apt": "aptos"
+    }
+    coin_id = mapping.get(symbol, symbol)
+
+    url = f"https://api.coingecko.com/api/v3/coins/{coin_id}"
+    try:
+        r = requests.get(url, timeout=10)
+        if r.status_code != 200:
+            return None
+        data = r.json()
+        market = data.get("market_data", {})
+        return {
+            "name": data.get("name", symbol.upper()),
+            "symbol": data.get("symbol", symbol).upper(),
+            "price": market.get("current_price", {}).get("usd"),
+            "change_24h": market.get("price_change_percentage_24h"),
+            "change_7d": market.get("price_change_percentage_7d"),
+            "high_24h": market.get("high_24h", {}).get("usd"),
+            "low_24h": market.get("low_24h", {}).get("usd"),
+            "volume": market.get("total_volume", {}).get("usd"),
+            "mcap": market.get("market_cap", {}).get("usd"),
+            "ath": market.get("ath", {}).get("usd"),
+            "ath_change": market.get("ath_change_percentage", {}).get("usd"),
+        }
+    except Exception as e:
+        logger.error(f"CoinGecko error: {e}")
+        return None
+
+
+def get_binance_klines(symbol: str, interval="1h", limit=50) -> list:
+    """Свечи с Binance (бесплатно, без ключа)"""
+    symbol = symbol.upper() + "USDT"
+    url = "https://api.binance.com/api/v3/klines"
+    params = {"symbol": symbol, "interval": interval, "limit": limit}
+    try:
+        r = requests.get(url, params=params, timeout=10)
+        if r.status_code != 200:
+            return []
+        return r.json()
+    except Exception:
+        return []
+
+
+def calc_sma(closes: list, period: int) -> float | None:
+    if len(closes) < period:
+        return None
+    return sum(closes[-period:]) / period
+
+
+def calc_rsi(closes: list, period: int = 14) -> float | None:
+    if len(closes) < period + 1:
+        return None
+    gains, losses = [], []
+    for i in range(1, len(closes)):
+        diff = closes[i] - closes[i - 1]
+        gains.append(max(diff, 0))
+        losses.append(max(-diff, 0))
+    avg_gain = sum(gains[-period:]) / period
+    avg_loss = sum(losses[-period:]) / period
+    if avg_loss == 0:
+        return 100.0
+    rs = avg_gain / avg_loss
+    return 100 - (100 / (1 + rs))
+
+
+def analyze_coin(symbol: str) -> str:
+    """Полный текстовый анализ"""
+    info = get_price_coingecko(symbol)
+    if not info or info["price"] is None:
+        return f"❌ Не удалось получить данные по {symbol.upper()}.\\nПопробуй: BTC, ETH, SOL, TON, DOGE..."
+
+    klines = get_binance_klines(symbol)
+    closes = [float(k[4]) for k in klines] if klines else []
+
+    sma7 = calc_sma(closes, 7)
+    sma25 = calc_sma(closes, 25)
+    rsi = calc_rsi(closes)
+
+    # Определение тренда
+    trend = "боковик"
+    trend_emoji = "↔️"
+    if sma7 and sma25:
+        if sma7 > sma25 * 1.01:
+            trend = "восходящий"
+            trend_emoji = "📈"
+        elif sma7 < sma25 * 0.99:
+            trend = "нисходящий"
+            trend_emoji = "📉"
+
+    # Простое "предсказание" на основе индикаторов
+    signals = []
+    if rsi is not None:
+        if rsi < 30:
+            signals.append("RSI в зоне перепроданности → возможен отскок вверх")
+        elif rsi > 70:
+            signals.append("RSI в зоне перекупленности → возможен откат вниз")
+        else:
+            signals.append(f"RSI нейтральный ({rsi:.1f})")
+
+    if sma7 and sma25:
+        if sma7 > sma25:
+            signals.append("Короткая MA выше длинной → бычий сигнал")
+        else:
+            signals.append("Короткая MA ниже длинной → медвежий сигнал")
+
+    prediction = "Скорее всего рынок будет продолжать текущий тренд в ближайшие часы/сутки. "
+    if "перепроданности" in " ".join(signals):
+        prediction = "Есть шанс на короткий отскок вверх. "
+    elif "перекупленности" in " ".join(signals):
+        prediction = "Возможен откат или коррекция вниз. "
+
+    # Форматирование чисел
+    def fmt(n):
+        if n is None:
+            return "—"
+        if n >= 1_000_000_000:
+            return f"\${n/1_000_000_000:.2f}B"
+        if n >= 1_000_000:
+            return f"\${n/1_000_000:.2f}M"
+        if n >= 1:
+            return f"\${n:,.2f}"
+        return f"\${n:.6f}"
+
+    change24 = info["change_24h"] or 0
+    change_emoji = "🟢" if change24 >= 0 else "🔴"
+
+    text = f"""
+{trend_emoji} <b>{info['name']} ({info['symbol']})</b>
+
+💰 Цена: <b>{fmt(info['price'])}</b>
+{change_emoji} 24ч: <b>{change24:+.2f}%</b>
+📅 7д: <b>{(info['change_7d'] or 0):+.2f}%</b>
+
+📊 24ч High: {fmt(info['high_24h'])}
+📊 24ч Low:  {fmt(info['low_24h'])}
+💸 Объём:   {fmt(info['volume'])}
+🏦 Кап:     {fmt(info['mcap'])}
+
+{trend_emoji} Тренд: <b>{trend}</b>
+"""
+    if rsi is not None:
+        text += f"📉 RSI(14): <b>{rsi:.1f}</b>\\n"
+    if sma7:
+        text += f"📏 SMA(7):  {fmt(sma7)}\\n"
+    if sma25:
+        text += f"📏 SMA(25): {fmt(sma25)}\\n"
+
+    text += "\\n<b>Сигналы:</b>\\n"
+    for s in signals:
+        text += f"• {s}\\n"
+
+    text += f"\\n🔮 <b>Краткий взгляд:</b>\\n{prediction}"
+    text += "\\n\\n<i>Это образовательный анализ, а не финансовый совет.</i>"
+    return text.strip()
+
+
+# ---------- Команды бота ----------
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    keyboard = [
+        [InlineKeyboardButton("💰 Цена BTC", callback_data="price_BTC"),
+         InlineKeyboardButton("📊 Анализ BTC", callback_data="analyze_BTC")],
+        [InlineKeyboardButton("💰 Цена ETH", callback_data="price_ETH"),
+         InlineKeyboardButton("📊 Анализ ETH", callback_data="analyze_ETH")],
+        [InlineKeyboardButton("🌍 Обзор рынка", callback_data="market")],
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    text = """
+👋 Привет! Я бот для анализа крипторынка.
+
+Я умею:
+• Показывать актуальную цену
+• Делать простой технический анализ
+• Описывать тренд и давать краткий взгляд
+
+Просто напиши:
+/price BTC
+/analyze SOL
+/market
+
+Или нажми кнопки ниже 👇
+"""
+    await update.message.reply_text(text, reply_markup=reply_markup)
+
+
+async def price_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    symbol = "BTC"
+    if context.args:
+        symbol = context.args[0]
+    info = get_price_coingecko(symbol)
+    if not info or info["price"] is None:
+        await update.message.reply_text(f"❌ Не нашёл {symbol.upper()}")
+        return
+
+    change = info["change_24h"] or 0
+    emoji = "🟢" if change >= 0 else "🔴"
+    text = f"""
+{emoji} <b>{info['name']} ({info['symbol']})</b>
+💰 <b>\${info['price']:,.4f}</b>  ({change:+.2f}% за 24ч)
+"""
+    await update.message.reply_text(text, parse_mode="HTML")
+
+
+async def analyze_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    symbol = "BTC"
+    if context.args:
+        symbol = context.args[0]
+    await update.message.reply_chat_action("typing")
+    text = analyze_coin(symbol)
+    await update.message.reply_text(text, parse_mode="HTML")
+
+
+async def market_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_chat_action("typing")
+    coins = ["bitcoin", "ethereum", "solana", "binancecoin", "ripple", "the-open-network"]
+    lines = ["🌍 <b>Краткий обзор рынка</b>\\n"]
+    for cid in coins:
+        try:
+            r = requests.get(f"https://api.coingecko.com/api/v3/simple/price?ids={cid}&vs_currencies=usd&include_24hr_change=true", timeout=8)
+            data = r.json().get(cid, {})
+            price = data.get("usd", 0)
+            change = data.get("usd_24h_change", 0)
+            emoji = "🟢" if change >= 0 else "🔴"
+            name = cid.replace("-", " ").title()
+            lines.append(f"{emoji} <b>{name}</b>: \${price:,.2f} ({change:+.1f}%)")
+        except Exception:
+            continue
+    lines.append("\\n<i>Данные: CoinGecko</i>")
+    await update.message.reply_text("\\n".join(lines), parse_mode="HTML")
+
+
+async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = """
+📖 <b>Справка</b>
+
+/price <символ> — текущая цена
+/analyze <символ> — полный анализ + тренд
+/market — обзор топ-монет
+/start — главное меню
+
+Примеры:
+/price btc
+/analyze eth
+/analyze ton
+"""
+    await update.message.reply_text(text, parse_mode="HTML")
+
+
+async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    data = query.data
+
+    if data.startswith("price_"):
+        symbol = data.split("_")[1]
+        info = get_price_coingecko(symbol)
+        if info and info["price"]:
+            change = info["change_24h"] or 0
+            emoji = "🟢" if change >= 0 else "🔴"
+            text = f"{emoji} <b>{info['name']}</b>\\n💰 \${info['price']:,.4f} ({change:+.2f}%)"
+            await query.edit_message_text(text, parse_mode="HTML")
+        else:
+            await query.edit_message_text("❌ Ошибка получения данных")
+
+    elif data.startswith("analyze_"):
+        symbol = data.split("_")[1]
+        await query.edit_message_text("⏳ Анализирую...")
+        text = analyze_coin(symbol)
+        await query.edit_message_text(text, parse_mode="HTML")
+
+    elif data == "market":
+        await query.edit_message_text("⏳ Загружаю рынок...")
+        # Переиспользуем логику market_cmd
+        coins = ["bitcoin", "ethereum", "solana", "binancecoin", "ripple", "the-open-network"]
+        lines = ["🌍 <b>Краткий обзор рынка</b>\\n"]
+        for cid in coins:
+            try:
+                r = requests.get(f"https://api.coingecko.com/api/v3/simple/price?ids={cid}&vs_currencies=usd&include_24hr_change=true", timeout=8)
+                data = r.json().get(cid, {})
+                price = data.get("usd", 0)
+                change = data.get("usd_24h_change", 0)
+                emoji = "🟢" if change >= 0 else "🔴"
+                name = cid.replace("-", " ").title()
+                lines.append(f"{emoji} <b>{name}</b>: \${price:,.2f} ({change:+.1f}%)")
+            except Exception:
+                continue
+        await query.edit_message_text("\\n".join(lines), parse_mode="HTML")
+
+
+def main():
+    if BOT_TOKEN == "ВСТАВЬ_СВОЙ_ТОКЕН_СЮДА":
+        print("❌ Сначала вставь токен от @BotFather в переменную BOT_TOKEN!")
+        return
+
+    app = Application.builder().token(BOT_TOKEN).build()
+
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("price", price_cmd))
+    app.add_handler(CommandHandler("analyze", analyze_cmd))
+    app.add_handler(CommandHandler("market", market_cmd))
+    app.add_handler(CommandHandler("help", help_cmd))
+    app.add_handler(CallbackQueryHandler(button_handler))
+
+    print("✅ Бот запущен! Нажми Ctrl+C чтобы остановить.")
+    app.run_polling(allowed_updates=Update.ALL_TYPES)
+
+
+if __name__ == "__main__":
+    main()
+`;
+
+let editor;
+
+window.onload = () => {
+  editor = CodeMirror.fromTextArea(document.getElementById("code"), {
+    mode: "python",
+    theme: "dracula",
+    lineNumbers: true,
+    lineWrapping: true,
+    indentUnit: 4,
+    tabSize: 4,
+    viewportMargin: Infinity,
+    autofocus: false
+  });
+  editor.setValue(DEFAULT_CODE);
+
+  // Подстраиваем высоту под мобильные
+  setTimeout(() => editor.refresh(), 100);
+};
+
+function showTab(name) {
+  ["editor", "preview", "deploy"].forEach(t => {
+    document.getElementById("panel-" + t).classList.add("hidden");
+    document.getElementById("tab-" + t).classList.remove("tab-active");
+    document.getElementById("tab-" + t).classList.add("text-slate-400");
+  });
+  document.getElementById("panel-" + name).classList.remove("hidden");
+  document.getElementById("tab-" + name).classList.add("tab-active");
+  document.getElementById("tab-" + name).classList.remove("text-slate-400");
+
+  if (name === "editor") {
+    setTimeout(() => editor.refresh(), 50);
+  }
+}
+
+function downloadCode() {
+  const code = editor.getValue();
+  const blob = new Blob([code], { type: "text/plain" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "crypto_bot.py";
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast("Файл скачан ✅");
+}
+
+function copyCode() {
+  navigator.clipboard.writeText(editor.getValue()).then(() => {
+    showToast("Скопировано в буфер ✅");
+  }).catch(() => {
+    showToast("Не удалось скопировать");
+  });
+}
+
+function resetCode() {
+  if (confirm("Сбросить код к исходному шаблону?")) {
+    editor.setValue(DEFAULT_CODE);
+    showToast("Шаблон восстановлен");
+  }
+}
+
+function toggleHelp() {
+  const modal = document.getElementById("help-modal");
+  modal.classList.toggle("hidden");
+  modal.classList.toggle("flex");
+}
+
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.remove("opacity-0");
+  setTimeout(() => t.classList.add("opacity-0"), 2200);
+}
+</script>
+</body>
+</html>
